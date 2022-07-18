@@ -8,6 +8,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 setuptools = "^62.1.0"
+grpcio = "^1.47.0"
+grpcio-tools = "^1.47.0"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.4"

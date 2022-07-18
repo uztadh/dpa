@@ -14,7 +14,7 @@ VENV_DIR:=.venv
 VENV_BIN:=.venv/bin/
 ACTIVATE:=source .venv/bin/activate &&
 
-.PHONY: help setup run lint format test build coverage
+.PHONY: help setup run-service run-client proto lint format test build coverage
 
 help:
 	echo "Data-Parallel Actors\n"
@@ -23,8 +23,18 @@ setup:
 	test -d $(VENV_DIR) || python3 -m venv $(VENV_DIR)
 	poetry install
 
-run:
-	python $(PROJECT_NAME)
+PROTO_DIR:=dpa/proto
+proto:
+	python -m grpc_tools.protoc -I$(PROTO_DIR) \
+		--python_out=$(PROTO_DIR) \
+		--grpc_python_out=$(PROTO_DIR) \
+		dpa/proto/*.proto
+
+run-service:
+	python dpa/node.py
+
+run-client:
+	python dpa/client.py
 
 lint:
 	flake8 --show-source .
