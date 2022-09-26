@@ -31,7 +31,7 @@ proto:
 server:
 	python dpa/server.py
 
-run-client:
+client:
 	python dpa/client.py
 
 lint:

@@ -7,19 +7,21 @@ import time
 from tooz import coordination
 import signal
 
-import proto.basics_pb2_grpc
-import proto.basics_pb2
+import proto.cluster_pb2_grpc
+import proto.cluster_pb2
 import dpa.logger
 
 
-class Node:
+class NodeMetadata:
     def __init__(self, node_id, capabilities):
         self.node_id = node_id
         self.capabilities = capabilities
 
 
-class Cluster:
-    def __init__(self, coordinator_addr, node: Node, group_id: str, logger=None):
+class ClusterMetadata:
+    def __init__(
+        self, coordinator_addr, node: NodeMetadata, group_id: str, logger=None
+    ):
         self.log = logger or dpa.logger.null
 
         # get coordinator (zookeeper)
@@ -79,21 +81,15 @@ class Cluster:
         self.log.info("is leader")
 
     def get_members(self) -> list[str]:
+        self.c.run_watchers()
         return [str(m) for m in self.members.keys()]
 
-    def get_leader(self):
-        return self.c.get_leader(self.group_id).get()
+    def get_leader(self) -> str:
+        self.c.run_watchers()
+        leader: bytes = self.c.get_leader(self.group_id).get()
+        return str(leader)
 
-    def start(self):
-        try:
-            while True:
-                self.c.run_watchers()
-                time.sleep(1)
-        except KeyboardInterrupt:
-            pass
-        self.stop()
-
-    def stop(self):
+    def close(self):
         if self.is_leader:
             self.c.stand_down_group_leader(self.group_id)
 
@@ -102,42 +98,41 @@ class Cluster:
         self.c.stop()
 
 
-def run_cluster():
-    log = dpa.logger.create_logger("cluster")
+class ClusterMetadataService(proto.cluster_pb2_grpc.ClusterServicer):
+    def __init__(self, cluster: ClusterMetadata, logger=None):
+        self.cluster = cluster
+        self.log = logger or dpa.logger.null
+
+    def GetLeader(self, request, context):
+        self.log.info("Basic.DoPing")
+        leader = self.cluster.get_leader()
+        leader_details = {"node_id": leader}
+        return proto.cluster_pb2.LeaderDetails(**leader_details)
+
+
+def serve():
+
+    # config
+    log = dpa.logger.create_logger("server")
+
+    host, port = "localhost", 50051
+    address = f"{host}:{port}"
 
     node_id = str(uuid.uuid4())[:8]
-    node = Node(node_id, {})
+    node = NodeMetadata(node_id, {})
     group_id = "dpa_group"
     log.info(f"node={node_id}")
 
     zk1_host, zk1_port = "127.0.0.1", 21811
     zk_addr = f"zookeeper://{zk1_host}:{zk1_port}"
 
-    cluster = Cluster(zk_addr, node, group_id, log)
-    cluster.start()
+    cluster = ClusterMetadata(zk_addr, node, group_id, log)
 
-
-class BasicService(proto.basics_pb2_grpc.BasicServicer):
-    def __init__(self, logger=None):
-        self.count = 0
-        self.log = logger or dpa.logger.null
-
-    def Ping(self, request, context):
-        self.count = self.count + 1
-        res = {"status": "Pong", "client_msg": request.client_msg, "count": self.count}
-        self.log.info("Basic.DoPing")
-        return proto.basics_pb2.PongResponse(**res)
-
-
-def serve_grpc():
-
-    log = dpa.logger.create_logger("server")
-
-    host, port = "localhost", 50051
-    address = f"{host}:{port}"
-
+    # set up grpc
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
-    proto.basics_pb2_grpc.add_BasicServicer_to_server(BasicService(logger=log), server)
+    proto.cluster_pb2_grpc.add_ClusterServicer_to_server(
+        ClusterMetadataService(cluster, logger=log), server
+    )
     server.add_insecure_port(address)
 
     def signal_handler(signal, frame):
@@ -151,4 +146,4 @@ def serve_grpc():
 
 
 if __name__ == "__main__":
-    serve_grpc()
+    serve()

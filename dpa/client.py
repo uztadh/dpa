@@ -1,16 +1,19 @@
 import grpc
 
-import proto.basics_pb2 as basics_pb2
-import proto.basics_pb2_grpc as basics_pb2_grpc
+
+import proto.cluster_pb2
+import proto.cluster_pb2_grpc
+import google.protobuf.empty_pb2 as empty
 
 
 def run():
     host, port = "localhost", 50051
     address = f"{host}:{port}"
     with grpc.insecure_channel(address) as channel:
-        stub = basics_pb2_grpc.BasicStub(channel)
-        req = basics_pb2.PingRequest(client_msg="Hello from client")
-        res = stub.Ping(req)
+        stub = proto.cluster_pb2_grpc.ClusterStub(channel)
+
+        req = empty.Empty()
+        res = stub.GetLeader(req)
         print(res)
 
 
