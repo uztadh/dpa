@@ -2,10 +2,11 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import basics_pb2 as basics__pb2
+import cluster_pb2 as cluster__pb2
+from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-class BasicStub(object):
+class ClusterStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -14,42 +15,42 @@ class BasicStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.Ping = channel.unary_unary(
-                '/dpa.Basic/Ping',
-                request_serializer=basics__pb2.PingRequest.SerializeToString,
-                response_deserializer=basics__pb2.PongResponse.FromString,
+        self.GetLeader = channel.unary_unary(
+                '/dpa.Cluster/GetLeader',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=cluster__pb2.LeaderDetails.FromString,
                 )
 
 
-class BasicServicer(object):
+class ClusterServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def Ping(self, request, context):
+    def GetLeader(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
 
-def add_BasicServicer_to_server(servicer, server):
+def add_ClusterServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Ping': grpc.unary_unary_rpc_method_handler(
-                    servicer.Ping,
-                    request_deserializer=basics__pb2.PingRequest.FromString,
-                    response_serializer=basics__pb2.PongResponse.SerializeToString,
+            'GetLeader': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetLeader,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=cluster__pb2.LeaderDetails.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'dpa.Basic', rpc_method_handlers)
+            'dpa.Cluster', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
 
 
  # This class is part of an EXPERIMENTAL API.
-class Basic(object):
+class Cluster(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def Ping(request,
+    def GetLeader(request,
             target,
             options=(),
             channel_credentials=None,
@@ -59,8 +60,8 @@ class Basic(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/dpa.Basic/Ping',
-            basics__pb2.PingRequest.SerializeToString,
-            basics__pb2.PongResponse.FromString,
+        return grpc.experimental.unary_unary(request, target, '/dpa.Cluster/GetLeader',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            cluster__pb2.LeaderDetails.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

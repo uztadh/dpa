@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
+package dpa;
+
+service Cluster {
+    rpc GetLeader(google.protobuf.Empty) returns(LeaderDetails) {}
+}
+
+message LeaderDetails { string node_id = 1; }
