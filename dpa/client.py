@@ -12,9 +12,12 @@ def run():
     with grpc.insecure_channel(address) as channel:
         stub = proto.cluster_pb2_grpc.ClusterStub(channel)
 
-        req = empty.Empty()
-        res = stub.GetLeader(req)
-        print(res)
+        # get members
+        member_details = stub.GetMembers(empty.Empty())
+        leader = member_details.leader
+        print("leader:", leader)
+        for m in member_details.members:
+            print(m)
 
 
 if __name__ == "__main__":

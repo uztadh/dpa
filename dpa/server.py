@@ -82,12 +82,12 @@ class ClusterMetadata:
 
     def get_members(self) -> list[str]:
         self.c.run_watchers()
-        return [str(m) for m in self.members.keys()]
+        return [m.decode("utf-8") for m in self.members.keys()]
 
     def get_leader(self) -> str:
         self.c.run_watchers()
         leader: bytes = self.c.get_leader(self.group_id).get()
-        return str(leader)
+        return leader.decode("utf-8")
 
     def close(self):
         if self.is_leader:
@@ -104,10 +104,20 @@ class ClusterMetadataService(proto.cluster_pb2_grpc.ClusterServicer):
         self.log = logger or dpa.logger.null
 
     def GetLeader(self, request, context):
-        self.log.info("Basic.DoPing")
         leader = self.cluster.get_leader()
-        leader_details = {"node_id": leader}
-        return proto.cluster_pb2.LeaderDetails(**leader_details)
+        node = {"node_id": leader}
+        return proto.cluster_pb2.NodeDetails(**node)
+
+    def GetMembers(self, request, context):
+        leader = self.cluster.get_leader()
+        members = self.cluster.get_members()
+        res = proto.cluster_pb2.MemberDetails(
+            leader=leader,
+            members=[
+                proto.cluster_pb2.NodeDetails(node_id=node_id) for node_id in members
+            ],
+        )
+        return res
 
 
 def serve():

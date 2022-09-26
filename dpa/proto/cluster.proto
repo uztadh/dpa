@@ -5,7 +5,13 @@ import "google/protobuf/empty.proto";
 package dpa;
 
 service Cluster {
-    rpc GetLeader(google.protobuf.Empty) returns(LeaderDetails) {}
+    rpc GetLeader(google.protobuf.Empty) returns(NodeDetails) {}
+    rpc GetMembers(google.protobuf.Empty) returns(MemberDetails) {}
 }
 
-message LeaderDetails { string node_id = 1; }
+message NodeDetails { string node_id = 1; }
+
+message MemberDetails {
+    string leader = 1;
+    repeated NodeDetails members = 2;
+}

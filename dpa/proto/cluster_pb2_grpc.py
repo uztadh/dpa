@@ -18,7 +18,12 @@ class ClusterStub(object):
         self.GetLeader = channel.unary_unary(
                 '/dpa.Cluster/GetLeader',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=cluster__pb2.LeaderDetails.FromString,
+                response_deserializer=cluster__pb2.NodeDetails.FromString,
+                )
+        self.GetMembers = channel.unary_unary(
+                '/dpa.Cluster/GetMembers',
+                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+                response_deserializer=cluster__pb2.MemberDetails.FromString,
                 )
 
 
@@ -31,13 +36,24 @@ class ClusterServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetMembers(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ClusterServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetLeader': grpc.unary_unary_rpc_method_handler(
                     servicer.GetLeader,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=cluster__pb2.LeaderDetails.SerializeToString,
+                    response_serializer=cluster__pb2.NodeDetails.SerializeToString,
+            ),
+            'GetMembers': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMembers,
+                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+                    response_serializer=cluster__pb2.MemberDetails.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -62,6 +78,23 @@ class Cluster(object):
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/dpa.Cluster/GetLeader',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            cluster__pb2.LeaderDetails.FromString,
+            cluster__pb2.NodeDetails.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetMembers(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/dpa.Cluster/GetMembers',
+            google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            cluster__pb2.MemberDetails.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

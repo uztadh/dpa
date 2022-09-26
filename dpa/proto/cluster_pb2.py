@@ -15,24 +15,34 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rcluster.proto\x12\x03\x64pa\x1a\x1bgoogle/protobuf/empty.proto\" \n\rLeaderDetails\x12\x0f\n\x07node_id\x18\x01 \x01(\t2D\n\x07\x43luster\x12\x39\n\tGetLeader\x12\x16.google.protobuf.Empty\x1a\x12.dpa.LeaderDetails\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rcluster.proto\x12\x03\x64pa\x1a\x1bgoogle/protobuf/empty.proto\"\x1e\n\x0bNodeDetails\x12\x0f\n\x07node_id\x18\x01 \x01(\t\"B\n\rMemberDetails\x12\x0e\n\x06leader\x18\x01 \x01(\t\x12!\n\x07members\x18\x02 \x03(\x0b\x32\x10.dpa.NodeDetails2~\n\x07\x43luster\x12\x37\n\tGetLeader\x12\x16.google.protobuf.Empty\x1a\x10.dpa.NodeDetails\"\x00\x12:\n\nGetMembers\x12\x16.google.protobuf.Empty\x1a\x12.dpa.MemberDetails\"\x00\x62\x06proto3')
 
 
 
-_LEADERDETAILS = DESCRIPTOR.message_types_by_name['LeaderDetails']
-LeaderDetails = _reflection.GeneratedProtocolMessageType('LeaderDetails', (_message.Message,), {
-  'DESCRIPTOR' : _LEADERDETAILS,
+_NODEDETAILS = DESCRIPTOR.message_types_by_name['NodeDetails']
+_MEMBERDETAILS = DESCRIPTOR.message_types_by_name['MemberDetails']
+NodeDetails = _reflection.GeneratedProtocolMessageType('NodeDetails', (_message.Message,), {
+  'DESCRIPTOR' : _NODEDETAILS,
   '__module__' : 'cluster_pb2'
-  # @@protoc_insertion_point(class_scope:dpa.LeaderDetails)
+  # @@protoc_insertion_point(class_scope:dpa.NodeDetails)
   })
-_sym_db.RegisterMessage(LeaderDetails)
+_sym_db.RegisterMessage(NodeDetails)
+
+MemberDetails = _reflection.GeneratedProtocolMessageType('MemberDetails', (_message.Message,), {
+  'DESCRIPTOR' : _MEMBERDETAILS,
+  '__module__' : 'cluster_pb2'
+  # @@protoc_insertion_point(class_scope:dpa.MemberDetails)
+  })
+_sym_db.RegisterMessage(MemberDetails)
 
 _CLUSTER = DESCRIPTOR.services_by_name['Cluster']
 if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
-  _LEADERDETAILS._serialized_start=51
-  _LEADERDETAILS._serialized_end=83
-  _CLUSTER._serialized_start=85
-  _CLUSTER._serialized_end=153
+  _NODEDETAILS._serialized_start=51
+  _NODEDETAILS._serialized_end=81
+  _MEMBERDETAILS._serialized_start=83
+  _MEMBERDETAILS._serialized_end=149
+  _CLUSTER._serialized_start=151
+  _CLUSTER._serialized_end=277
 # @@protoc_insertion_point(module_scope)
