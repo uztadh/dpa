@@ -1,7 +1,7 @@
 import grpc
 
-import dpa.proto.basics_pb2 as basics_pb2
-import dpa.proto.basics_pb2_grpc as basics_pb2_grpc
+import proto.basics_pb2 as basics_pb2
+import proto.basics_pb2_grpc as basics_pb2_grpc
 
 
 def run():
@@ -10,7 +10,7 @@ def run():
     with grpc.insecure_channel(address) as channel:
         stub = basics_pb2_grpc.BasicStub(channel)
         req = basics_pb2.PingRequest(client_msg="Hello from client")
-        res = stub.DoPing(req)
+        res = stub.Ping(req)
         print(res)
 
 

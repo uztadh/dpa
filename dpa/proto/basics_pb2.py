@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x62\x61sics.proto\x12\x03\x64pa\"!\n\x0bPingRequest\x12\x12\n\nclient_msg\x18\x01 \x01(\t\"A\n\x0cPongResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x12\n\nclient_msg\x18\x02 \x01(\t\x12\r\n\x05\x63ount\x18\x03 \x01(\x05\x32\x38\n\x05\x42\x61sic\x12/\n\x06\x44oPing\x12\x10.dpa.PingRequest\x1a\x11.dpa.PongResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0c\x62\x61sics.proto\x12\x03\x64pa\"!\n\x0bPingRequest\x12\x12\n\nclient_msg\x18\x01 \x01(\t\"A\n\x0cPongResponse\x12\x0e\n\x06status\x18\x01 \x01(\t\x12\x12\n\nclient_msg\x18\x02 \x01(\t\x12\r\n\x05\x63ount\x18\x03 \x01(\x05\x32\x36\n\x05\x42\x61sic\x12-\n\x04Ping\x12\x10.dpa.PingRequest\x1a\x11.dpa.PongResponse\"\x00\x62\x06proto3')
 
 
 
@@ -43,5 +43,5 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _PONGRESPONSE._serialized_start=56
   _PONGRESPONSE._serialized_end=121
   _BASIC._serialized_start=123
-  _BASIC._serialized_end=179
+  _BASIC._serialized_end=177
 # @@protoc_insertion_point(module_scope)

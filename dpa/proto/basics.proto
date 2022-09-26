@@ -3,7 +3,7 @@ syntax = "proto3";
 package dpa;
 
 service Basic {
-    rpc DoPing(PingRequest) returns(PongResponse) {}
+    rpc Ping(PingRequest) returns(PongResponse) {}
 }
 
 message PingRequest { string client_msg = 1; }

@@ -14,8 +14,8 @@ class BasicStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.DoPing = channel.unary_unary(
-                '/dpa.Basic/DoPing',
+        self.Ping = channel.unary_unary(
+                '/dpa.Basic/Ping',
                 request_serializer=basics__pb2.PingRequest.SerializeToString,
                 response_deserializer=basics__pb2.PongResponse.FromString,
                 )
@@ -24,7 +24,7 @@ class BasicStub(object):
 class BasicServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def DoPing(self, request, context):
+    def Ping(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -33,8 +33,8 @@ class BasicServicer(object):
 
 def add_BasicServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'DoPing': grpc.unary_unary_rpc_method_handler(
-                    servicer.DoPing,
+            'Ping': grpc.unary_unary_rpc_method_handler(
+                    servicer.Ping,
                     request_deserializer=basics__pb2.PingRequest.FromString,
                     response_serializer=basics__pb2.PongResponse.SerializeToString,
             ),
@@ -49,7 +49,7 @@ class Basic(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def DoPing(request,
+    def Ping(request,
             target,
             options=(),
             channel_credentials=None,
@@ -59,7 +59,7 @@ class Basic(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/dpa.Basic/DoPing',
+        return grpc.experimental.unary_unary(request, target, '/dpa.Basic/Ping',
             basics__pb2.PingRequest.SerializeToString,
             basics__pb2.PongResponse.FromString,
             options, channel_credentials,

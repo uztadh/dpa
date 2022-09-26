@@ -1,7 +1,5 @@
 # =============================================================================
-PROJECT_NAME:=dpa
-
-.DEFAULT_GOAL:=run
+.DEFAULT_GOAL:=help
 .SILENT:
 SHELL:=/usr/bin/bash
 
@@ -14,7 +12,7 @@ VENV_DIR:=.venv
 VENV_BIN:=.venv/bin/
 ACTIVATE:=source .venv/bin/activate &&
 
-.PHONY: help setup run-service run-client proto lint format test build coverage
+.PHONY: help setup server client proto lint format test build coverage
 
 help:
 	echo "Data-Parallel Actors\n"
@@ -30,8 +28,8 @@ proto:
 		--grpc_python_out=$(PROTO_DIR) \
 		dpa/proto/*.proto
 
-run-service:
-	python dpa/node.py
+server:
+	python dpa/server.py
 
 run-client:
 	python dpa/client.py
