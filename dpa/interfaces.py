@@ -1,6 +1,8 @@
 from types import LambdaType
 from typing import Protocol, Optional, Any
+from enum import IntEnum
 from pathlib import Path
+from dataclasses import dataclass
 
 
 class QueryEngine(Protocol):
@@ -188,3 +190,62 @@ class WriteQueryPlan:
 
     def abort(self, shard: Shard):
         ...
+
+
+class DatastoreStatus(IntEnum):
+    ALIVE = 0
+    DEAD = 1
+
+
+class DatastoreDescription:
+    def __init__(self, id_: int, status: DatastoreStatus, host: str, port: int):
+        self.id_ = id_
+        self.status = status
+        self.host = host
+        self.port = port
+
+    @staticmethod
+    def parse_from_summary_str(s: str) -> Optional["DatastoreDescription"]:
+
+        try:
+            ts = s.split("\n")
+            if len(ts) != 2:
+                raise ValueError(f"Invalid summary string: {s}")
+            id_, status = int(ts[0]), DatastoreStatus(int(ts[1]))
+            host, port = ts[2], int(ts[3])
+            return DatastoreDescription(id_, status, host, port)
+        except Exception:
+            return None
+
+    def __str__(self) -> str:
+        return f"{self.id_}\n{self.status}\n{self.host}\n{self.port}"
+
+
+@dataclass
+class TableInfo:
+    name: str
+    id_: int
+    num_shards: int
+
+
+class ZKShardDescription:
+    cloud_name: str
+    version_number: int
+
+    def __init__(self, cloud_name: str, version_number: int):
+        self.cloud_name = cloud_name
+        self.version_number = version_number
+
+    def __str__(self) -> str:
+        return f"{self.cloud_name}\n{self.version_number}"
+
+    @staticmethod
+    def parse_from_summary_str(s: str):
+        try:
+            ts = s.split("\n")
+            if len(ts) != 2:
+                raise ValueError(f"Invalid summary string: {s}")
+            cloud_name, version_number = ts[0], int(ts[1])
+            return ZKShardDescription(cloud_name, version_number)
+        except Exception as e:
+            return None
