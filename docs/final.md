@@ -18,3 +18,54 @@
   actors
 
 ## DPA Runtime
+
+## Dependencies
+
+utilities
+
+- none
+
+interfaces
+
+- none
+
+datastore
+
+- broker.Broker
+- interfaces.{Row, Shard, ShardFactory, WriteQueryPlan}
+- utilities:{ConsistentHash, DataStoreDescription, TableInfo, Utilities,
+  ZKShardDescription}
+
+broker
+
+- datastore.Datastore
+- interfaces
+- utilities:{ConsistentHash, DataStoreDescription, TableInfo, Utilities}
+
+coordinator
+
+- broker.Broker
+- utilities:{ConsistentHash, Broker, DataStoreDescription, TableInfo, Utilities,
+  ZKShardDescription}
+
+awscloud
+
+- coordinator.CoordinatorCloud
+- datastore.DatastoreCloud
+
+localcloud
+
+- awscloud.AWSDataStoreCloud
+- coordinator.CoordinatorCloud
+- datastore.DataStore
+- interfaces.{Row, Shard, ShardFactory }
+
+## Operators
+
+- Scatter operator in these files:
+  - datastore/ServiceDataStoreDataStore.java
+  - interfaces/ShuffleReadQueryPlan, AnchoredReadQueryPlan
+
+- Gather operator in these files:
+  - interfaces/ShuffleReadQueryPlan, AnchoredReadQueryPlan
+  - datastore/ServiceBrokerDataStore.java
