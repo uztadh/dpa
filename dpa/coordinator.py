@@ -1,9 +1,12 @@
 from logging import Logger
+from os import wait
 import random
 from queue import PriorityQueue
 from typing import Protocol, Mapping, Optional
 from enum import IntEnum
+from dpa.datastore import DatastoreDescription, ShardDescription
 import dpa.logger
+from dpa.util import ConsistentHash
 
 
 class CoordinatorCloud(Protocol):
@@ -161,6 +164,48 @@ class DefaultLoadBalancer(LoadBalancer):
                     server_min_queue.put((min_load, underloaded_server))
 
         return updated_locations
+
+
+class CoordinatorCoord(Protocol):
+    log: Logger
+
+    def close(self):
+        ...
+
+    def set_datastore_description(self, desc: DatastoreDescription):
+        ...
+
+    def get_shard_description(self, shard: int) -> Optional[ShardDescription]:
+        ...
+
+    def set_consistent_hash_function(self, constistent_hash: ConsistentHash):
+        ...
+
+
+class DefaultCoordinatorCoord(CoordinatorCoord):
+    def __init__(self, logger: Optional[Logger] = None):
+        if logger is None:
+            logger = dpa.logger.null
+        self.log = logger
+        self.datastore_descriptions = {}
+        self.shard_descriptions = {}
+        self.consistent_hash_fn = None
+
+    def close(self):
+        pass
+
+    def set_datastore_description(self, descr: DatastoreDescription):
+        self.datastore_descriptions[descr.id_] = descr
+
+    def get_shard_description(self, shard: int) -> Optional[ShardDescription]:
+        try:
+            return self.shard_descriptions[shard]
+        except KeyError as e:
+            self.log.error(f"get ShardDescription for {shard} error: {e}")
+            return None
+
+    def set_consistent_hash_function(self, fn: ConsistentHash):
+        self.consistent_hash_fn = fn
 
 
 def main():
