@@ -1,7 +1,9 @@
+from logging import Logger
 import random
 from queue import PriorityQueue
-from typing import Protocol, Mapping
+from typing import Protocol, Mapping, Optional
 from enum import IntEnum
+import dpa.logger
 
 
 class CoordinatorCloud(Protocol):
@@ -22,6 +24,8 @@ class ScaleOpt(IntEnum):
 
 
 class AutoScaler(Protocol):
+    log: Logger
+
     def autoscale(
         self,
         server_cpu_usage: dict[int, float],
@@ -30,7 +34,10 @@ class AutoScaler(Protocol):
 
 
 class DefaultAutoScaler(AutoScaler):
-    def __init__(self):
+    def __init__(self, logger: Optional[Logger] = None):
+        if logger is None:
+            logger = dpa.logger.null
+        self.log = logger
         self.quiscence = 0
         self.quiscence_period = 2
         self.add_server_threshold = 0.7
@@ -39,6 +46,10 @@ class DefaultAutoScaler(AutoScaler):
     def autoscale(self, server_cpu_usage: dict[int, float]) -> ScaleOpt:
         if len(server_cpu_usage) == 0:
             return ScaleOpt.NO_CHANGE
+
+        average_cpu_usage = sum(server_cpu_usage.values()) / len(server_cpu_usage)
+        self.log.info(f"Average CPU Usage: {average_cpu_usage}")
+
         # after acting, wait quiescencePeriod cycles before acting again for
         # CPU to rebalance.
         if self.quiscence > 0:
@@ -46,7 +57,6 @@ class DefaultAutoScaler(AutoScaler):
             return ScaleOpt.NO_CHANGE
 
         self.quiscence = self.quiscence_period
-        average_cpu_usage = sum(server_cpu_usage.values()) / len(server_cpu_usage)
 
         if average_cpu_usage > self.add_server_threshold:
             # add a server:
@@ -59,6 +69,8 @@ class DefaultAutoScaler(AutoScaler):
 
 
 class LoadBalancer(Protocol):
+    log: Logger
+
     def balance_load(
         self,
         shards: set[int],
@@ -73,7 +85,10 @@ class LoadBalancer(Protocol):
 
 
 class DefaultLoadBalancer(LoadBalancer):
-    def __init__(self):
+    def __init__(self, logger: Optional[Logger] = None):
+        if logger is None:
+            logger = dpa.logger.null
+        self.log = logger
         self.epsilon_ratio = 5
 
     def balance_load(
@@ -136,7 +151,7 @@ class DefaultLoadBalancer(LoadBalancer):
                     server_loads[overloaded_server] = max_load - most_loaded_shardload
 
                     server_loads[underloaded_server] = min_load + most_loaded_shardload
-                    print(
+                    self.log.info(
                         f"Shard {most_loaded_shard} transfered from DS {overloaded_server} to DS {underloaded_server}"
                     )
                     server_min_queue.put(
@@ -149,9 +164,10 @@ class DefaultLoadBalancer(LoadBalancer):
 
 
 def main():
+    log = dpa.logger.default
     SEED = 42
     r = random.Random(SEED)
-    lb = DefaultLoadBalancer()
+    lb = DefaultLoadBalancer(logger=log)
 
     num_shards = 9
     shards = {sh for sh in range(1, num_shards + 1)}
@@ -164,8 +180,8 @@ def main():
     current_locations = {sh: r.choice(server_list) for sh in shards}
 
     updated_locations = lb.balance_load(shards, servers, shard_loads, current_locations)
-    print(current_locations)
-    print(updated_locations)
+    log.info("current_locations: {}".format(current_locations))
+    log.info("updated_locations: {}".format(updated_locations))
 
 
 if __name__ == "__main__":
