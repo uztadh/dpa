@@ -9,15 +9,26 @@ import dpa.logger
 from dpa.util import ConsistentHash
 
 
-class CoordinatorCloud(Protocol):
+class Provisioning(Protocol):
     def add_datastore(self) -> bool:
         ...
 
-    def remove_datastore(self, cloud_ID: int):
+    def remove_datastore(self, id_: int):
         ...
 
     def shutdown(self):
         ...
+
+
+class DefaultProvisioning(Provisioning):
+    def add_datastore(self):
+        return True
+
+    def remove_datastore(self, id_):
+        pass
+
+    def shutdown(self):
+        pass
 
 
 class ScaleOpt(IntEnum):
@@ -166,7 +177,7 @@ class DefaultLoadBalancer(LoadBalancer):
         return updated_locations
 
 
-class CoordinatorCoord(Protocol):
+class CoordinatorDCS(Protocol):
     log: Logger
 
     def close(self):
@@ -182,7 +193,7 @@ class CoordinatorCoord(Protocol):
         ...
 
 
-class DefaultCoordinatorCoord(CoordinatorCoord):
+class DefaultCoordinatorDCS(CoordinatorDCS):
     def __init__(self, logger: Optional[Logger] = None):
         if logger is None:
             logger = dpa.logger.null
@@ -208,25 +219,52 @@ class DefaultCoordinatorCoord(CoordinatorCoord):
         self.consistent_hash_fn = fn
 
 
+class Coordinator:
+    def __init__(
+        self,
+        dcs: CoordinatorDCS,
+        provisioning: Provisioning,
+        load_balancer: LoadBalancer,
+        auto_scaler: AutoScaler,
+        logger: Optional[Logger] = None,
+    ):
+        if logger is None:
+            logger = dpa.logger.null
+        self.log = logger
+        self.dcs = dcs
+
+    def add_replica(self, shard_num: int, replica_ID: int):
+        raise NotImplementedError
+
+    def remove_shard(self, shard_num: int, target_ID: int):
+        raise NotImplementedError
+
+    def collect_load(self):
+        raise NotImplementedError
+
+    def add_datastore(self):
+        raise NotImplementedError
+
+    def remove_datastore(self):
+        raise NotImplementedError
+
+    def assign_shards(self):
+        raise NotImplementedError
+
+    def rebalance_consistent_hash(self, qps_load: dict[int, int]):
+        raise NotImplementedError
+
+
 def main():
     log = dpa.logger.default
-    SEED = 42
-    r = random.Random(SEED)
-    lb = DefaultLoadBalancer(logger=log)
 
-    num_shards = 9
-    shards = {sh for sh in range(1, num_shards + 1)}
-    shard_loads = {shard: r.randint(1, 10) for shard in shards}
-
-    num_servers = 3
-    servers = {s for s in range(1, num_servers + 1)}
-
-    server_list = list(servers)
-    current_locations = {sh: r.choice(server_list) for sh in shards}
-
-    updated_locations = lb.balance_load(shards, servers, shard_loads, current_locations)
-    log.info("current_locations: {}".format(current_locations))
-    log.info("updated_locations: {}".format(updated_locations))
+    coordinator = Coordinator(
+        dcs=DefaultCoordinatorDCS(logger=log),
+        provisioning=DefaultProvisioning(),
+        load_balancer=DefaultLoadBalancer(logger=log),
+        auto_scaler=DefaultAutoScaler(logger=log),
+        logger=log,
+    )
 
 
 if __name__ == "__main__":
