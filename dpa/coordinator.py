@@ -1,12 +1,13 @@
 from logging import Logger
 from os import wait
 import random
+from dataclasses import dataclass
 from queue import PriorityQueue
 from typing import Protocol, Mapping, Optional
 from enum import IntEnum
-from dpa.datastore import DatastoreDescription, ShardDescription
+from dpa.datastore import DatastoreDescription, DatastoreStatus, ShardDescription
 import dpa.logger
-from dpa.util import ConsistentHash
+from dpa.util import ConsistentHash, DefaultConsistentHash
 
 
 class Provisioning(Protocol):
@@ -178,7 +179,8 @@ class DefaultLoadBalancer(LoadBalancer):
 
 
 class CoordinatorDCS(Protocol):
-    log: Logger
+    log: Logger = dpa.logger.null
+    consistent_hash: ConsistentHash
 
     def close(self):
         ...
@@ -189,27 +191,29 @@ class CoordinatorDCS(Protocol):
     def get_shard_description(self, shard: int) -> Optional[ShardDescription]:
         ...
 
-    def set_consistent_hash_function(self, constistent_hash: ConsistentHash):
-        ...
-
 
 class DefaultCoordinatorDCS(CoordinatorDCS):
     # TODO: lock for consistent hash
     # TODO: lock/atomic int for datastore number
-    def __init__(self, logger: Optional[Logger] = None):
-        if logger is None:
-            logger = dpa.logger.null
-        self.log = logger
+    def __init__(
+        self, consistent_hash: ConsistentHash, logger: Optional[Logger] = None
+    ):
+        if logger is not None:
+            self.log = logger
         self.datastore_descriptions = {}
         self.shard_descriptions = {}
-        self.consistent_hash_fn = None
+        self.consistent_hash = consistent_hash
         self.datastore_number = 0
+        self.shard_to_replica_datastores: set[int] = set()
 
     def close(self):
         pass
 
     def set_datastore_description(self, descr: DatastoreDescription):
         self.datastore_descriptions[descr.id_] = descr
+
+    def get_datastore_description(self, ds_id: int) -> Optional[DatastoreDescription]:
+        return self.datastore_descriptions.get(ds_id)
 
     def get_shard_description(self, shard: int) -> Optional[ShardDescription]:
         try:
@@ -218,13 +222,23 @@ class DefaultCoordinatorDCS(CoordinatorDCS):
             self.log.error(f"get ShardDescription for {shard} error: {e}")
             return None
 
-    def set_consistent_hash_function(self, fn: ConsistentHash):
-        self.consistent_hash_fn = fn
+    def get_replica_datastores_for_shard(self, shard_num: int) -> set[int]:
+        return self.shard_to_replica_datastores
+
+    def add_replica_datastore_for_shard(self, replica_ID: int, shard_num: int):
+        self.shard_to_replica_datastores.add(shard_num)
 
     def get_and_increment_datastore_number(self) -> int:
         curr = self.datastore_number
         self.datastore_number += 1
         return curr
+
+
+@dataclass
+class Load:
+    qps: dict[int, int]
+    memory_usage: dict[int, int]
+    server_cpu_usage: dict[int, float]
 
 
 class Coordinator:
@@ -244,33 +258,181 @@ class Coordinator:
         self.load_balancer = load_balancer
         self.auto_scaler = auto_scaler
 
-    def add_replica(self, shard_num: int, replica_ID: int):
+    def add_replica_datastore_for_shard(self, shard_num: int, replica_ID: int):
         raise NotImplementedError
 
-    def remove_shard(self, shard_num: int, target_ID: int):
+        # TODO: hold shardMapLock
+
+        # get replica_ID current status
+        replica_description = self.dcs.get_datastore_description(replica_ID)
+        if replica_description is None:
+            raise Exception(f"Invalid replica ID {replica_ID}, does not exist")
+        if replica_description.status == DatastoreStatus.DEAD:
+            raise Exception(f"Datastore {replica_ID} status: dead")
+
+        # get primary datastore for given shard
+        # TODO: learn how primary datastore for a given shard are assigned
+        primary_datastore_id = self.dcs.consistent_hash.get_random_bucket(shard_num)
+
+        if replica_ID == primary_datastore_id:
+            raise Exception(
+                f"Replica datastore {replica_ID} is already set as primary datastore for shard {shard_num}"
+            )
+
+        # get all replica datastores for given shard
+        curr_replicas = self.dcs.get_replica_datastores_for_shard(shard_num)
+
+        # if replica already in set, error out, or maybe make this a noop
+        if replica_ID in curr_replicas:
+            raise Exception(
+                f"Already set datastore {replica_ID} as replica for shard {shard}"
+            )
+
+        # send message to replica datastore to load shard
+        # add replica_ID to shard's replica list
+        # if fails, remove replica from replica list
+        self.dcs.add_replica_datastore_for_shard(replica_ID, shard_num)
+
+    def remove_replica_datastore_for_shard(self, shard_num: int, replica_ID: int):
         raise NotImplementedError
 
-    def collect_load(self):
-        raise NotImplementedError
+        # TODO: hold shardmap lock
+
+        # get primary datastore
+
+        # if replica is primary datastore, error out, invalid operation
+
+        # get replica list
+
+        # if replica not in replica list for given shard, error out, invalid
+        # operation
+
+        # remove replica from set of replicas being tracked by DCS
+
+        # send remove shard message to the replica datastore
+
+        # notify primary datastore that replica no longer holds a replica for
+        # the given shard
 
     def add_datastore(self):
         raise NotImplementedError
 
+        # add datastore via provisioning
+
     def remove_datastore(self):
         raise NotImplementedError
+
+        # get list of datastores
+
+        # build list of removable datastore IDs as follows:
+        #   filter out all non-ALIVE datastores, i.e. keep alive ones only
+        #   filter out all datastores not in dsIDToCloudID, this stores mappings
+        #       from datastore IDs to the cloud IDs (cloudIDs are uniquely
+        #       assigned by the autoscaler to respective datastore IDs)
+
+        # get count of active datastores, will be used to pick random datastore
+        # to remove
+
+        # if number of active datastores is less than or equal to 1 OR number of
+        # removable datastores is 0, don't remove any datastores and return
+        # immediately
+
+        # pick a random datastore from the removable set
+        # get its respective cloud/provisioning ID
+        # remove from consistent_hash
+        # assign shards
+        # set its status to DEAD
+        # remove from cloud/provisioning
 
     def assign_shards(self):
         raise NotImplementedError
 
-    def rebalance_consistent_hash(self, qps_load: dict[int, int]):
+        # get list of datastores from the consistent_hash
+
+        # create new consistent_hash
+
+        # build list of all shards from table info map
+        # tabe_info_map has the following signature: dict[string, TableInfo]
+
+        # send a reshuffle message to all datastores with the new
+        # consistent_hash plus shard list. ie, invoke execute_reshuffle_add
+
+        # remove unassigned shards via invoking execute_reshuffle_remove, also
+        # uses tne new consistent_hash plus shard list
+
+    def collect_load(self) -> Load:
+
+        # load across all datastores
+        load = Load(
+            qps=dict(),
+            memory_usage=dict(),
+            server_cpu_usage=dict(),
+        )
+
+        # for each shard, keep total count
+        shard_count_map: dict[int, int] = dict()
+
+        # for each datastore whose status is ALIVE
+        #   get shard usage. shard usage has the following fields:
+        #       - ds_ID int32
+        #       - shard_qps: map shard->queries per second
+        #       - shard_memory_usage: map shard->memory usage
+        #       - server_cpu_usage: float
+        #   add/merge datastore's qps per shard to total load's
+        #   add/merge datastore's memory usage per shard to total load's
+        #   add datastore's server_cpu_usage to load
+
+        # use shard count to normalize the memory usage per shard, i.e.
+        # for each shard's memory usage, divide by shard's count/replica
+
         raise NotImplementedError
+        return load
+
+    def rebalance_shards(self, qps_load: dict[int, int]):
+        # raise NotImplementedError
+        shards = set(qps_load.keys())
+        servers: set[int] = set()  # TODO retrieve from consistent_hash ?
+        current_locations: dict[
+            int, int
+        ] = dict()  # TODO retrieve from consistent_hash ?
+        updated_locations = self.load_balancer.balance_load(
+            shards,
+            servers,
+            qps_load,
+            current_locations,
+        )
+        for shard_num, new_location in updated_locations.items():
+            # if new_location != prev_location:
+            #   put in reassignment map of consistent_hash
+            pass
+
+    def balance_load_daemon(self):
+        raise NotImplementedError
+        # runs as a daemon/asynchronously
+
+        # TODO: figure out how to use memory usage for load balancing
+
+        # in a loop:
+        # collect load
+        loop = False
+        while loop:
+            load = self.collect_load()
+            if len(load.qps) > 0:
+                self.rebalance_shards(load.qps)
+                self.assign_shards()
+                if self.provisioning != None:
+                    action = self.auto_scaler.autoscale(load.server_cpu_usage)
+                    if action == ScaleOpt.ADD:
+                        self.add_datastore()
+                    elif action == ScaleOpt.REMOVE:
+                        self.remove_datastore()
 
 
 def main():
     log = dpa.logger.default
 
     coordinator = Coordinator(
-        dcs=DefaultCoordinatorDCS(logger=log),
+        dcs=DefaultCoordinatorDCS(consistent_hash=DefaultConsistentHash(), logger=log),
         provisioning=DefaultProvisioning(),
         load_balancer=DefaultLoadBalancer(logger=log),
         auto_scaler=DefaultAutoScaler(logger=log),
