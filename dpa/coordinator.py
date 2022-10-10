@@ -194,6 +194,8 @@ class CoordinatorDCS(Protocol):
 
 
 class DefaultCoordinatorDCS(CoordinatorDCS):
+    # TODO: lock for consistent hash
+    # TODO: lock/atomic int for datastore number
     def __init__(self, logger: Optional[Logger] = None):
         if logger is None:
             logger = dpa.logger.null
@@ -201,6 +203,7 @@ class DefaultCoordinatorDCS(CoordinatorDCS):
         self.datastore_descriptions = {}
         self.shard_descriptions = {}
         self.consistent_hash_fn = None
+        self.datastore_number = 0
 
     def close(self):
         pass
@@ -218,6 +221,11 @@ class DefaultCoordinatorDCS(CoordinatorDCS):
     def set_consistent_hash_function(self, fn: ConsistentHash):
         self.consistent_hash_fn = fn
 
+    def get_and_increment_datastore_number(self) -> int:
+        curr = self.datastore_number
+        self.datastore_number += 1
+        return curr
+
 
 class Coordinator:
     def __init__(
@@ -232,6 +240,9 @@ class Coordinator:
             logger = dpa.logger.null
         self.log = logger
         self.dcs = dcs
+        self.provisioning = provisioning
+        self.load_balancer = load_balancer
+        self.auto_scaler = auto_scaler
 
     def add_replica(self, shard_num: int, replica_ID: int):
         raise NotImplementedError

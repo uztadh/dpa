@@ -1,25 +1,23 @@
+from logging import Logger
+from enum import IntEnum
+from collections import defaultdict
 from typing import Protocol, Optional, Any
-from dpa.common import (
+
+from dpa.datastore import DatastoreDescription
+from util import ConsistentHash, obj_to_bytes
+from dpa.query import (
+    QueryEngine,
+    Row,
+    TableInfo,
+    ShuffleReadQueryPlan,
+    SimpleWriteQueryPlan,
+    AnchoredReadQueryPlan,
+    WriteQueryPlan,
     AnchoredReadQueryMessage,
     AnchoredReadQueryResponse,
     ShuffleReadQueryMessage,
     ShuffleReadQueryResponse,
 )
-from dpa.datastore import DatastoreDescription
-from util import ConsistentHash, obj_to_bytes
-from interfaces import (
-    QueryEngine,
-    Row,
-    ShuffleReadQueryPlan,
-    SimpleWriteQueryPlan,
-    TableInfo,
-    AnchoredReadQueryPlan,
-    WriteQueryPlan,
-)
-from logging import Logger
-from enum import IntEnum
-from collections import defaultdict
-
 from dpa import logger
 
 
