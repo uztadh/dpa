@@ -2,7 +2,7 @@ from logging import Logger
 from os import wait
 import random
 from queue import PriorityQueue
-from typing import Protocol, Mapping, Optional, Any, Callable
+from typing import Protocol, Mapping, Optional
 from enum import IntEnum
 from dpa.datastore import DatastoreDescription, ShardDescription
 import dpa.logger
@@ -220,71 +220,18 @@ class DefaultCoordinatorDCS(CoordinatorDCS):
 
 
 class Coordinator:
-    log: Logger = dpa.logger.null
-    address: str
-    dcs: CoordinatorDCS
-    load_balancer: LoadBalancer
-    autoscaler: AutoScaler
-    provisioning: Provisioning
-    consistent_hash_lock: Any
-
-    class Opt:
-        @staticmethod
-        def address(host: str, port: int):
-            def opt(c: Coordinator):
-                c.address = f"{host}:{port}"
-
-            return opt
-
-        @staticmethod
-        def load_balancer(lb: LoadBalancer):
-            def opt(c: Coordinator):
-                c.load_balancer = lb
-
-            return opt
-
-        @staticmethod
-        def autoscaler(as_: AutoScaler):
-            def opt(c: Coordinator):
-                c.autoscaler = as_
-
-            return opt
-
-        @staticmethod
-        def provisioning(p: Provisioning):
-            def opt(c: Coordinator):
-                c.provisioning = p
-
-            return opt
-
-        @staticmethod
-        def logger(logger: Logger):
-            def opt(c: Coordinator):
-                c.log = logger
-
-            return opt
-
-    def __init__(self, *opts: Callable[["Coordinator"], None]):
-        for set_opt in opts:
-            set_opt(self)
-
-        try:
-            self.load_balancer
-        except AttributeError:
-            self.log.info("using default load_balancer")
-            self.load_balancer = DefaultLoadBalancer()
-
-        try:
-            self.autoscaler
-        except AttributeError:
-            self.log.info("using default autoscaler")
-            self.autoscaler = DefaultAutoScaler()
-
-        try:
-            self.provisioning
-        except AttributeError:
-            self.log.info("using default provisioning")
-            self.provisioning = DefaultProvisioning()
+    def __init__(
+        self,
+        dcs: CoordinatorDCS,
+        provisioning: Provisioning,
+        load_balancer: LoadBalancer,
+        auto_scaler: AutoScaler,
+        logger: Optional[Logger] = None,
+    ):
+        if logger is None:
+            logger = dpa.logger.null
+        self.log = logger
+        self.dcs = dcs
 
     def add_replica(self, shard_num: int, replica_ID: int):
         raise NotImplementedError
@@ -311,11 +258,12 @@ class Coordinator:
 def main():
     log = dpa.logger.default
 
-    opt = Coordinator.Opt
-
     coordinator = Coordinator(
-        opt.address("localhost", 9000),
-        opt.logger(log),
+        dcs=DefaultCoordinatorDCS(logger=log),
+        provisioning=DefaultProvisioning(),
+        load_balancer=DefaultLoadBalancer(logger=log),
+        auto_scaler=DefaultAutoScaler(logger=log),
+        logger=log,
     )
 
 
