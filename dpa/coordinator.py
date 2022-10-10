@@ -1,6 +1,4 @@
 from logging import Logger
-from os import wait
-import random
 from dataclasses import dataclass
 from queue import PriorityQueue
 from typing import Protocol, Mapping, Optional
@@ -183,13 +181,25 @@ class CoordinatorDCS(Protocol):
     consistent_hash: ConsistentHash
 
     def close(self):
-        ...
+        raise NotImplementedError
 
-    def set_datastore_description(self, desc: DatastoreDescription):
-        ...
+    def set_datastore_description(self, descr: DatastoreDescription):
+        raise NotImplementedError
+
+    def get_datastore_description(self, ds_id: int) -> Optional[DatastoreDescription]:
+        raise NotImplementedError
 
     def get_shard_description(self, shard: int) -> Optional[ShardDescription]:
-        ...
+        raise NotImplementedError
+
+    def get_replica_datastores_for_shard(self, shard_num: int) -> set[int]:
+        raise NotImplementedError
+
+    def add_replica_datastore_for_shard(self, replica_ID: int, shard_num: int):
+        raise NotImplementedError
+
+    def get_and_increment_datastore_number(self) -> int:
+        raise NotImplementedError
 
 
 class DefaultCoordinatorDCS(CoordinatorDCS):
